@@ -27,28 +27,28 @@ func resourceFeature() *schema.Resource {
 				Required:    true,
 				Description: "A description of this feature",
 			},
-			"variableSchema": {
+			"variable_schema": {
 				Type:     schema.TypeList,
-				Optional:    true,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"variable": &schema.Schema{
+						"variable": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"name": &schema.Schema{
-										Type:     schema.TypeInt,
+									"name": {
+										Type:     schema.TypeString,
 										Required: true,
 									},
-									"type": &schema.Schema{
+									"type": {
 										Type:     schema.TypeString,
-										Computed: true,
+										Required: true,
 									},
-									"defaultValue": &schema.Schema{
+									"default_value": {
 										Type:     schema.TypeString,
-										Computed: true,
+										Required: true,
 									},
 								},
 							},
@@ -58,28 +58,34 @@ func resourceFeature() *schema.Resource {
 			},
 			"rules": {
 				Type:     schema.TypeList,
-				Optional:    true,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"rule": &schema.Schema{
+						"rule": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"environments": &schema.Schema{
+									"environments": {
 										Type:     schema.TypeList,
 										Required: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
 									},
-									"audience": &schema.Schema{
+									"audience": {
 										Type:     schema.TypeList,
 										Required: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
 									},
-									"rollout": &schema.Schema{
+									"rollout": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"variables": &schema.Schema{
+									"variables": {
 										Type:     schema.TypeMap,
 										Required: true,
 									},
@@ -88,7 +94,7 @@ func resourceFeature() *schema.Resource {
 						},
 					},
 				},
-			}
+			},
 		},
 		Create:        resourceCreateFeature,
 		ReadContext:   resourceOrderRead,

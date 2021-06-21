@@ -3,6 +3,7 @@ package optimizely
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -12,36 +13,51 @@ func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"host": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("HASHICUPS_HOST", nil),
-			},
-			"port": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("HASHICUPS_USERNAME", nil),
+				Type:     schema.TypeString,
+				Required: true,
 			},
 			"token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("HASHICUPS_PASSWORD", nil),
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"project_id": {
+				Type:     schema.TypeString,
+				Required: true,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"optimizely_feature": resourceFeature(),
+			"optimizely_feature":  resourceFeature(),
+			"optimizely_audience": resourceAudience(),
+		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"optimizely_environment": dataSourceEnvironment(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	fmt.Println("providerConfigure")
+	var diags diag.Diagnostics
+
 	address := d.Get("host").(string)
-	port := d.Get("port").(int)
 	token := d.Get("token").(string)
-	fmt.Print(address)
-	fmt.Print(port)
-	fmt.Print(token)
-	return nil, nil
+	projectId := d.Get("project_id").(string)
+	projectIdInt64, err := strconv.ParseInt(projectId, 10, 64)
+
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to parse project_id: %s; %+v", projectId, err),
+		})
+
+		return nil, diags
+	}
+
+	optimizelyClient := OptimizelyClient{
+		Address:   address,
+		Token:     token,
+		ProjectId: projectIdInt64,
+	}
+
+	return optimizelyClient, diags
 }

@@ -3,13 +3,13 @@ package main
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
-	"github.com/pffreitas/optimizely-terraform-provider/provider"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely"
 )
 
 func main() {
 	plugin.Serve(&plugin.ServeOpts{
 		ProviderFunc: func() *schema.Provider {
-			return provider.Provider()
+			return optimizely.Provider()
 		},
 	})
 }
