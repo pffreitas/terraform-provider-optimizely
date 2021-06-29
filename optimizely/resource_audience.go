@@ -60,8 +60,11 @@ func resourceAudienceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		Conditions:  d.Get("conditions").(string),
 	}
 
+	fmt.Println(">>>>>> resourceAudienceCreate")
+
 	audResp, err := client.CreateAudience(aud)
 	if err != nil {
+		fmt.Println(">>>>>> resourceAudienceCreate, err")
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to create Audience in Optimizely: %+v", err),
@@ -70,12 +73,15 @@ func resourceAudienceCreate(ctx context.Context, d *schema.ResourceData, m inter
 		return diags
 	}
 
+	fmt.Printf(">>>>>> resourceAudienceCreate, %+v", audResp)
 	d.SetId(strconv.FormatInt(audResp.ID, 10))
 	return resourceAudienceRead(ctx, d, m)
 }
 
 func resourceAudienceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	fmt.Println(">>>>>> resourceAudienceRead", d.Id())
 
 	client := m.(OptimizelyClient)
 	aud, err := client.GetAudience(d.Id())

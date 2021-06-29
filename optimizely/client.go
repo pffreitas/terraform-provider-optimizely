@@ -135,3 +135,33 @@ func (c *OptimizelyClient) UpdateAudience(aud Audience) (Audience, error) {
 
 	return audienceResp, nil
 }
+
+func (c *OptimizelyClient) CreateFeature(feat Feature) (Feature, error) {
+	postBody, err := json.Marshal(feat)
+	if err != nil {
+		return feat, err
+	}
+
+	req, err := c.newHttpRequest("POST", "features", bytes.NewBuffer(postBody))
+	if err != nil {
+		return feat, err
+	}
+
+	httpClient := http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return feat, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return feat, err
+	}
+
+	fmt.Printf("\n\n >>>>>>> %s \n\n", body)
+	var featureResp Feature
+	json.Unmarshal(body, &featureResp)
+
+	return featureResp, nil
+}

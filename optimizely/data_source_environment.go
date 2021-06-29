@@ -2,6 +2,7 @@ package optimizely
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -17,6 +18,10 @@ func dataSourceEnvironment() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"key": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 		},
 	}
 }
@@ -25,7 +30,8 @@ func dataSourceIngredientsRead(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-	d.Set("id", strconv.FormatInt(time.Now().Unix(), 10))
+	fmt.Printf("----- %+v \n\n", d.Get("key"))
+	d.SetId(d.Get("key").(string))
 
 	return diags
 }
