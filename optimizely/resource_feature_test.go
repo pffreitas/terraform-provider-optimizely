@@ -9,19 +9,24 @@ import (
 func testFeatureConfigBasic() string {
 	return `
 	provider "optimizely" {
-		host  = "https://api.optimizely.com/v2"
+		host  = "https://api.optimizely.com"
 		token = "2:myr1dVQxw203jqcj-vr4Sxr1PNAfu2FzPrwauwA_vPcc9HHMB1GY"
-		project_id = "19036502365"
+		project_id = "20410805626"
 	}
 	
 	data "optimizely_environment" "sit" {
-		key = "TOGGLES_SIT"
+		key = "sit"
 	}
 	data "optimizely_environment" "uat" {
-		key = "TOGGLES_UAT"
+		key = "uat"
 	}
 	data "optimizely_environment" "prod" {
-		key = "TOGGLES_PROD"
+		key = "prod"
+	}
+
+	resource "optimizely_audience" "country_us" {
+		name = "COUNTRY_US_TERRAFORM"
+		conditions = "[\"and\", {\"type\": \"custom_attribute\", \"name\": \"COUNTRY\", \"value\": \"us\"}]"
 	}
 	
 	resource "optimizely_feature" "dynamic_forms_terraform" {
@@ -45,8 +50,9 @@ func testFeatureConfigBasic() string {
 	  
 		rules {
 		  rule {
+			key 		 = "us"
 			environments = [data.optimizely_environment.sit.id]
-			audience     = ["20381209628"]
+			audience     = [optimizely_audience.country_us.id]
 
 			enabled = 1000
 			variables = {
@@ -54,15 +60,7 @@ func testFeatureConfigBasic() string {
 			}
 		  }
 
-		  rule {
-			environments = [data.optimizely_environment.uat.id, data.optimizely_environment.prod.id]
-			audience     = ["20381209628"]
-
-			enabled = 100
-			variables = {
-			  buttonPosition = "right"
-			}
-		  }
+		  
 		}
 	  }	 
 	`

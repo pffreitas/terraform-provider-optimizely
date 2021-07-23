@@ -26,9 +26,10 @@ type FeatureEnvironment struct {
 }
 
 type RolloutRule struct {
-	AudienceConditions string `json:"audience_conditions"`
-	Enabled            bool   `json:"enabled"`
-	PercentageIncluded int    `json:"percentage_included"`
+	Key                string      `json:"key"`
+	AudienceConditions []Condition `json:"audience_conditions"`
+	Enabled            bool        `json:"enabled"`
+	PercentageIncluded int         `json:"percentage_included"`
 }
 
 type Condition interface{}
@@ -106,6 +107,10 @@ func resourceFeature() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
 									"environments": {
 										Type:     schema.TypeList,
 										Required: true,
@@ -177,24 +182,26 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 					audConditions = append(audConditions, AudienceCondition{AudienceID: audIdInt})
 				}
 
-				audienceConditionsJson, _ := json.Marshal(audConditions)
-
+				key := rMap["key"].(string)
 				rollout := rMap["enabled"].(int)
 				rolloutRule := RolloutRule{
-					AudienceConditions: string(audienceConditionsJson),
+					Key:                key,
+					AudienceConditions: audConditions,
 					Enabled:            rollout > 0,
 					PercentageIncluded: rollout,
 				}
 
-				fmt.Println(rolloutRule)
 				if featureEnvironment, ok := envs[env.(string)]; ok {
-					// featureEnvironment.RolloutRules = append(featureEnvironment.RolloutRules, rolloutRule)
+					fmt.Println(featureEnvironment)
+					featureEnvironment.RolloutRules = append(featureEnvironment.RolloutRules, rolloutRule)
+					fmt.Println(featureEnvironment)
 					envs[env.(string)] = featureEnvironment
+					fmt.Println(envs[env.(string)])
 				}
 
 				if featureEnvironment, ok := envs[env.(string)]; !ok {
 					featureEnvironment = FeatureEnvironment{
-						RolloutRules: []RolloutRule{},
+						RolloutRules: []RolloutRule{rolloutRule},
 					}
 					envs[env.(string)] = featureEnvironment
 				}
@@ -203,15 +210,15 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 
-	for key, env := range envs {
+	// for key, env := range envs {
 
-		env.RolloutRules = append(env.RolloutRules, RolloutRule{
-			AudienceConditions: "everyone",
-			Enabled:            false,
-			PercentageIncluded: 0,
-		})
-		envs[key] = env
-	}
+	// 	env.RolloutRules = append(env.RolloutRules, RolloutRule{
+	// 		AudienceConditions: []Condition{"everyone"},
+	// 		Enabled:            false,
+	// 		PercentageIncluded: 0,
+	// 	})
+	// 	envs[key] = env
+	// }
 
 	feat := Feature{
 		ProjectId:    client.ProjectId,
@@ -227,6 +234,16 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 	fmt.Printf("\n ---- %s \n", j)
 
 	featResp, err := client.CreateFeature(feat)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to create Feature in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	err = client.CreateRuleset(feat)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
