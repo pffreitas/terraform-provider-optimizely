@@ -21,38 +21,6 @@ type Flag struct {
 	Environments map[string]FeatureEnvironment `json:"environments"`
 }
 
-type FeatureEnvironment struct {
-	RolloutRules []RolloutRule `json:"rollout_rules"`
-}
-
-type RolloutRule struct {
-	Key                string      `json:"key"`
-	AudienceConditions []Condition `json:"audience_conditions"`
-	Enabled            bool        `json:"enabled"`
-	PercentageIncluded int         `json:"percentage_included"`
-	Deliver            string      `json:"deliver"`
-}
-
-type Condition interface{}
-
-type AudienceCondition struct {
-	AudienceID int64 `json:"audience_id"`
-}
-
-type VariableSchema struct {
-	Archived     bool   `json:"archived"`
-	DefaultValue string `json:"default_value"`
-	Key          string `json:"key"`
-	Type         string `json:"type"`
-}
-
-type Variation struct {
-	Key         string                 `json:"key"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Variables   map[string]interface{} `json:"variables"`
-}
-
 func ResourceFeature() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -197,76 +165,9 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 	var diags diag.Diagnostics
 	client := m.(FlagClient)
 
-	var variablesSchema []VariableSchema
-	variableSchema := d.Get("variable_schema").([]interface{})
-	for _, variable := range variableSchema {
-		vars := variable.(map[string]interface{})["variable"]
-		for _, v := range vars.([]interface{}) {
-			vMap := v.(map[string]interface{})
-			vSchema := VariableSchema{
-				Key:          vMap["key"].(string),
-				DefaultValue: vMap["default_value"].(string),
-				Type:         vMap["type"].(string),
-				Archived:     vMap["archived"].(bool),
-			}
-			variablesSchema = append(variablesSchema, vSchema)
-		}
-	}
-
-	var variations []Variation
-	for _, variationMap := range d.Get("variations").([]interface{}) {
-		vars := variationMap.(map[string]interface{})["variation"]
-		for _, v := range vars.([]interface{}) {
-			vMap := v.(map[string]interface{})
-			vSchema := Variation{
-				Key:         vMap["key"].(string),
-				Name:        vMap["name"].(string),
-				Description: vMap["description"].(string),
-				Variables:   vMap["variables"].(map[string]interface{}),
-			}
-			variations = append(variations, vSchema)
-		}
-	}
-
-	var envs = make(map[string]FeatureEnvironment)
-	for _, rules := range d.Get("rules").([]interface{}) {
-		rule := rules.(map[string]interface{})["rule"]
-		for _, r := range rule.([]interface{}) {
-
-			rMap := r.(map[string]interface{})
-			environments := rMap["environments"].([]interface{})
-			for _, env := range environments {
-				audConditions := []Condition{"and"}
-
-				for _, audId := range rMap["audience"].([]interface{}) {
-					audIdInt, _ := strconv.ParseInt(audId.(string), 10, 64)
-					audConditions = append(audConditions, AudienceCondition{AudienceID: audIdInt})
-				}
-
-				rollout := rMap["percentage_included"].(int)
-				rolloutRule := RolloutRule{
-					Key:                rMap["key"].(string),
-					AudienceConditions: audConditions,
-					Enabled:            rollout > 0,
-					PercentageIncluded: rollout * 100,
-					Deliver:            rMap["deliver"].(string),
-				}
-
-				if featureEnvironment, ok := envs[env.(string)]; ok {
-					featureEnvironment.RolloutRules = append(featureEnvironment.RolloutRules, rolloutRule)
-					envs[env.(string)] = featureEnvironment
-				}
-
-				if featureEnvironment, ok := envs[env.(string)]; !ok {
-					featureEnvironment = FeatureEnvironment{
-						RolloutRules: []RolloutRule{rolloutRule},
-					}
-					envs[env.(string)] = featureEnvironment
-				}
-			}
-
-		}
-	}
+	variablesSchema := parseVariableSchema(d)
+	variations := parseVariation(d)
+	envs := parseEnvironment(d)
 
 	flag := Flag{
 		ProjectId:    d.Get("project").(int),
