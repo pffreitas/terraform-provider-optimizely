@@ -3,7 +3,6 @@ package flag
 import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 type VariableSchema struct {
-	Archived     bool   `json:"archived"`
 	DefaultValue string `json:"default_value"`
 	Key          string `json:"key"`
 	Type         string `json:"type"`
@@ -21,7 +20,6 @@ func parseVariableSchema(d *schema.ResourceData) []VariableSchema {
 				Key:          vMap["key"].(string),
 				DefaultValue: vMap["default_value"].(string),
 				Type:         vMap["type"].(string),
-				Archived:     vMap["archived"].(bool),
 			}
 			variablesSchema = append(variablesSchema, vSchema)
 		}

@@ -28,19 +28,18 @@ func ResourceFeature() *schema.Resource {
 				Type:        schema.TypeInt,
 				Required:    true,
 				Description: "Project ID",
-				Elem:        &schema.Schema{Type: schema.TypeInt},
+				// Elem:        &schema.Schema{Type: schema.TypeInt},
 			},
 			"key": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Feature key, also acts as it's unique ID",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				// Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Human readable name",
-				ForceNew:    true,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -57,10 +56,6 @@ func ResourceFeature() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"archived": {
-										Type:     schema.TypeBool,
-										Optional: true,
-									},
 									"key": {
 										Type:     schema.TypeString,
 										Required: true,

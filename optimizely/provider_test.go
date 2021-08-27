@@ -106,6 +106,9 @@ func TestAccHashicupsOrderBasic(t *testing.T) {
 		},
 	})
 }
+func testFlagConfigUpdate() string {
+	return ""
+}
 
 func testFlagConfigBasic() (string, error) {
 	data := map[string]interface{}{
@@ -114,10 +117,19 @@ func testFlagConfigBasic() (string, error) {
 	}
 
 	tmpl, err := template.New("").Parse(`
+	variable "api_host" {
+		type = string
+		default = "https://api.optimizely.com"
+	}
+
+	variable "api_token" {
+		type = string
+		sensitive = true
+	}
+
 	provider "optimizely" {
-		host  = "https://api.optimizely.com"
-		token = "2:myr1dVQxw203jqcj-vr4Sxr1PNAfu2FzPrwauwA_vPcc9HHMB1GY"
-		project_id = "20410805626"
+		host  = var.api_host
+		token = var.api_token
 	}
 	
 	data "optimizely_environment" "sit" {
@@ -238,6 +250,7 @@ func testAccCheckHashicupsOrderDestroy(s *terraform.State) error {
 
 func TestFlagBasic(t *testing.T) {
 	hcl, _ := testFlagConfigBasic()
+	hclUpdate := testFlagConfigUpdate()
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
@@ -245,7 +258,12 @@ func TestFlagBasic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: hcl,
-
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckHashicupsOrderExists("optimizely_feature.dynamic_forms_terraform"),
+				),
+			},
+			{
+				Config: hclUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckHashicupsOrderExists("optimizely_feature.dynamic_forms_terraform"),
 				),

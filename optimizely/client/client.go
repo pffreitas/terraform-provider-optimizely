@@ -7,9 +7,8 @@ import (
 )
 
 type OptimizelyClient struct {
-	ProjectId int64
-	Address   string
-	Token     string
+	Address string
+	Token   string
 }
 
 func (c OptimizelyClient) newHttpRequest(method, url string, body io.Reader) (*http.Request, error) {
