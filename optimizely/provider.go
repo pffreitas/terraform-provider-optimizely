@@ -7,6 +7,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely/audience"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely/client"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely/environment"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely/flag"
+	"github.com/pffreitas/optimizely-terraform-provider/optimizely/project"
 )
 
 func Provider() *schema.Provider {
@@ -26,11 +31,12 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"optimizely_feature":  resourceFeature(),
-			"optimizely_audience": resourceAudience(),
+			"optimizely_feature":  flag.ResourceFeature(),
+			"optimizely_audience": audience.ResourceAudience(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"optimizely_environment": dataSourceEnvironment(),
+			"optimizely_environment": environment.DataSourceEnvironment(),
+			"optimizely_project":     project.DataSourceProject(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -53,7 +59,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diags
 	}
 
-	optimizelyClient := OptimizelyClient{
+	optimizelyClient := client.OptimizelyClient{
 		Address:   address,
 		Token:     token,
 		ProjectId: projectIdInt64,

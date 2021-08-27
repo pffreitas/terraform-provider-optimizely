@@ -1,8 +1,7 @@
-package optimizely
+package flag
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -10,14 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-type Feature struct {
+type Flag struct {
 	ID           int64                         `json:"id"`
-	ProjectId    int64                         `json:"project_id"`
+	ProjectId    int                           `json:"project_id"`
 	Name         string                        `json:"name"`
 	Description  string                        `json:"description"`
 	Key          string                        `json:"key"`
 	Archived     bool                          `json:"archived"`
 	Variables    []VariableSchema              `json:"variables"`
+	Variations   []Variation                   `json:"variations"`
 	Environments map[string]FeatureEnvironment `json:"environments"`
 }
 
@@ -30,6 +30,7 @@ type RolloutRule struct {
 	AudienceConditions []Condition `json:"audience_conditions"`
 	Enabled            bool        `json:"enabled"`
 	PercentageIncluded int         `json:"percentage_included"`
+	Deliver            string      `json:"deliver"`
 }
 
 type Condition interface{}
@@ -45,9 +46,22 @@ type VariableSchema struct {
 	Type         string `json:"type"`
 }
 
-func resourceFeature() *schema.Resource {
+type Variation struct {
+	Key         string                 `json:"key"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Variables   map[string]interface{} `json:"variables"`
+}
+
+func ResourceFeature() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"project": {
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "Project ID",
+				Elem:        &schema.Schema{Type: schema.TypeInt},
+			},
 			"key": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -97,6 +111,38 @@ func resourceFeature() *schema.Resource {
 					},
 				},
 			},
+			"variations": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"variation": {
+							Type:     schema.TypeList,
+							Required: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"description": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"variables": {
+										Type:     schema.TypeMap,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"rules": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -125,12 +171,12 @@ func resourceFeature() *schema.Resource {
 											Type: schema.TypeString,
 										},
 									},
-									"enabled": {
+									"percentage_included": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"variables": {
-										Type:     schema.TypeMap,
+									"deliver": {
+										Type:     schema.TypeString,
 										Required: true,
 									},
 								},
@@ -149,7 +195,7 @@ func resourceFeature() *schema.Resource {
 
 func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	client := m.(OptimizelyClient)
+	client := m.(FlagClient)
 
 	var variablesSchema []VariableSchema
 	variableSchema := d.Get("variable_schema").([]interface{})
@@ -164,6 +210,21 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 				Archived:     vMap["archived"].(bool),
 			}
 			variablesSchema = append(variablesSchema, vSchema)
+		}
+	}
+
+	var variations []Variation
+	for _, variationMap := range d.Get("variations").([]interface{}) {
+		vars := variationMap.(map[string]interface{})["variation"]
+		for _, v := range vars.([]interface{}) {
+			vMap := v.(map[string]interface{})
+			vSchema := Variation{
+				Key:         vMap["key"].(string),
+				Name:        vMap["name"].(string),
+				Description: vMap["description"].(string),
+				Variables:   vMap["variables"].(map[string]interface{}),
+			}
+			variations = append(variations, vSchema)
 		}
 	}
 
@@ -182,21 +243,18 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 					audConditions = append(audConditions, AudienceCondition{AudienceID: audIdInt})
 				}
 
-				key := rMap["key"].(string)
-				rollout := rMap["enabled"].(int)
+				rollout := rMap["percentage_included"].(int)
 				rolloutRule := RolloutRule{
-					Key:                key,
+					Key:                rMap["key"].(string),
 					AudienceConditions: audConditions,
 					Enabled:            rollout > 0,
-					PercentageIncluded: rollout,
+					PercentageIncluded: rollout * 100,
+					Deliver:            rMap["deliver"].(string),
 				}
 
 				if featureEnvironment, ok := envs[env.(string)]; ok {
-					fmt.Println(featureEnvironment)
 					featureEnvironment.RolloutRules = append(featureEnvironment.RolloutRules, rolloutRule)
-					fmt.Println(featureEnvironment)
 					envs[env.(string)] = featureEnvironment
-					fmt.Println(envs[env.(string)])
 				}
 
 				if featureEnvironment, ok := envs[env.(string)]; !ok {
@@ -210,44 +268,54 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 
-	// for key, env := range envs {
-
-	// 	env.RolloutRules = append(env.RolloutRules, RolloutRule{
-	// 		AudienceConditions: []Condition{"everyone"},
-	// 		Enabled:            false,
-	// 		PercentageIncluded: 0,
-	// 	})
-	// 	envs[key] = env
-	// }
-
-	feat := Feature{
-		ProjectId:    client.ProjectId,
+	flag := Flag{
+		ProjectId:    d.Get("project").(int),
 		Name:         d.Get("name").(string),
 		Description:  d.Get("description").(string),
 		Key:          d.Get("key").(string),
 		Archived:     false,
 		Variables:    variablesSchema,
+		Variations:   variations,
 		Environments: envs,
 	}
 
-	j, _ := json.Marshal(feat)
-	fmt.Printf("\n ---- %s \n", j)
-
-	featResp, err := client.CreateFeature(feat)
+	featResp, err := client.CreateFlag(flag)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to create Feature in Optimizely: %+v", err),
+			Summary:  fmt.Sprintf("Failed to create flag in Optimizely: %+v", err),
 		})
 
 		return diags
 	}
 
-	err = client.CreateRuleset(feat)
+	for _, variation := range variations {
+		err := client.CreateVariation(flag, variation)
+		if err != nil {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("Failed to create flag variations in Optimizely: %+v", err),
+			})
+
+			return diags
+		}
+	}
+
+	err = client.CreateRuleset(flag)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to create Feature in Optimizely: %+v", err),
+			Summary:  fmt.Sprintf("Failed to create ruleset in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	err = client.EnableRuleset(flag)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to enable ruleset in Optimizely: %+v", err),
 		})
 
 		return diags
@@ -259,76 +327,13 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	client := m.(OptimizelyClient)
-	aud, err := client.GetAudience(d.Id())
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to create Audience in Optimizely: %+v", err),
-		})
-
-		return diags
-	}
-
-	d.SetId(strconv.FormatInt(aud.ID, 10))
-	d.Set("name", aud.Name)
-	d.Set("description", aud.Description)
-	d.Set("conditions", aud.Conditions)
-
-	return diags
+	return nil
 }
 
 func resourceFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
-	client := m.(OptimizelyClient)
-
-	audId, err := strconv.ParseInt(d.Id(), 10, 64)
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to parse Audicence ID: %s,  %+v", d.Id(), err),
-		})
-
-		return diags
-	}
-
-	aud := Audience{
-		ProjectId:   client.ProjectId,
-		ID:          audId,
-		Name:        d.Get("name").(string),
-		Description: d.Get("description").(string),
-		Conditions:  d.Get("conditions").(string),
-	}
-
-	_, err = client.UpdateAudience(aud)
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to create Audience in Optimizely: %+v", err),
-		})
-
-		return diags
-	}
-
-	return resourceAudienceRead(ctx, d, m)
+	return nil
 }
 
 func resourceFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	client := m.(OptimizelyClient)
-
-	_, err := client.ArchiveAudience(d.Id())
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf("Failed to create Audience in Optimizely: %+v", err),
-		})
-
-		return diags
-	}
-
-	return resourceAudienceRead(ctx, d, m)
+	return nil
 }

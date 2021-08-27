@@ -1,8 +1,7 @@
-package optimizely
+package environment
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceEnvironment() *schema.Resource {
+func DataSourceEnvironment() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceIngredientsRead,
 		Schema: map[string]*schema.Schema{
@@ -30,7 +29,7 @@ func dataSourceIngredientsRead(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-	fmt.Printf("----- %+v \n\n", d.Get("key"))
+	// fmt.Printf("----- %+v \n\n", d.Get("key"))
 	d.SetId(d.Get("key").(string))
 
 	return diags
