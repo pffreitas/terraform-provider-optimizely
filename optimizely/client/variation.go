@@ -44,17 +44,14 @@ func (c OptimizelyClient) CreateVariation(flag flag.Flag, variation flag.Variati
 	httpClient := http.Client{}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Printf("\n\n Create variation - %s -- %+v \n\n", postBody, err)
 		return err
 	}
 
 	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("\n\n Create variation OK - reqBody: %s -- respBody: %s --  err: %+v \n\n", postBody, respBody, err)
 
 	return nil
 }

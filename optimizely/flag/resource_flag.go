@@ -27,28 +27,31 @@ func ResourceFeature() *schema.Resource {
 			"project": {
 				Type:        schema.TypeInt,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Project ID",
-				// Elem:        &schema.Schema{Type: schema.TypeInt},
 			},
 			"key": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Feature key, also acts as it's unique ID",
-				// Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Human readable name",
 			},
 			"description": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "A description of this feature",
 			},
 			"variable_schema": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"variable": {
@@ -77,6 +80,7 @@ func ResourceFeature() *schema.Resource {
 			"variations": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"variation": {
@@ -109,6 +113,7 @@ func ResourceFeature() *schema.Resource {
 			"rules": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"rule": {
@@ -151,20 +156,16 @@ func ResourceFeature() *schema.Resource {
 		},
 		CreateContext: resourceFeatureCreate,
 		ReadContext:   resourceFeatureRead,
-		UpdateContext: resourceFeatureUpdate,
 		DeleteContext: resourceFeatureDelete,
 	}
 }
 
-func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
-	client := m.(FlagClient)
-
+func parseFlag(d *schema.ResourceData) Flag {
 	variablesSchema := parseVariableSchema(d)
 	variations := parseVariation(d)
 	envs := parseEnvironment(d)
 
-	flag := Flag{
+	return Flag{
 		ProjectId:    d.Get("project").(int),
 		Name:         d.Get("name").(string),
 		Description:  d.Get("description").(string),
@@ -174,6 +175,15 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Variations:   variations,
 		Environments: envs,
 	}
+}
+
+func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	client := m.(FlagClient)
+
+	flag := parseFlag(d)
+
+	fmt.Printf("CREATE %s \n", flag.Key)
 
 	featResp, err := client.CreateFlag(flag)
 	if err != nil {
@@ -185,7 +195,7 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 		return diags
 	}
 
-	for _, variation := range variations {
+	for _, variation := range flag.Variations {
 		err := client.CreateVariation(flag, variation)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
@@ -223,13 +233,38 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return nil
-}
+	var diags diag.Diagnostics
 
-func resourceFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return nil
+	return diags
 }
 
 func resourceFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return nil
+	var diags diag.Diagnostics
+	client := m.(FlagClient)
+
+	flag := parseFlag(d)
+
+	fmt.Printf("DELETE %s \n", flag.Key)
+
+	err := client.DisableRuleset(flag)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to disable ruleset while deleting flag in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	err = client.DeleteFlag(flag.ProjectId, flag.Key)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to delete flag in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	return diags
 }

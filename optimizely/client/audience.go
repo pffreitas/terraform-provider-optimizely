@@ -33,7 +33,6 @@ func (c OptimizelyClient) CreateAudience(aud audience.Audience) (audience.Audien
 		return aud, err
 	}
 
-	fmt.Printf("\n\n >>>>>>>> aud resp:  %s \n\n", body)
 	var audienceResp audience.Audience
 	json.Unmarshal(body, &audienceResp)
 

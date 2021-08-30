@@ -2,6 +2,7 @@ package optimizely
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,11 +12,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/pffreitas/optimizely-terraform-provider/optimizely/client"
 )
 
 var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
+
+type TestConfig struct {
+	AudienceName string
+	FlagKey      string
+}
 
 func init() {
 	testAccProvider = Provider()
@@ -80,7 +85,8 @@ func testAccCheckHashicupsOrderExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No OrderID set")
 		}
 
-		fmt.Printf("%+v --- %+v --- %+v \n", rs, ok, s.RootModule().Resources)
+		attr, _ := json.Marshal(rs.Primary.Attributes)
+		fmt.Printf("---- %+v \n", string(attr))
 
 		return nil
 	}
@@ -106,58 +112,55 @@ func TestAccHashicupsOrderBasic(t *testing.T) {
 		},
 	})
 }
-func testFlagConfigUpdate() string {
-	return ""
+
+var hclCommon = `
+variable "api_host" {
+	type = string
+	default = "https://api.optimizely.com"
 }
 
-func testFlagConfigBasic() (string, error) {
-	data := map[string]interface{}{
-		"AudienceName": strings.ToUpper(gofakeit.BS()),
-		"FlagKey":      gofakeit.BS(),
-	}
+variable "api_token" {
+	type = string
+	sensitive = true
+}
 
-	tmpl, err := template.New("").Parse(`
-	variable "api_host" {
-		type = string
-		default = "https://api.optimizely.com"
-	}
+provider "optimizely" {
+	host  = var.api_host
+	token = var.api_token
+}
 
-	variable "api_token" {
-		type = string
-		sensitive = true
-	}
+data "optimizely_environment" "sit" {
+	key = "sit"
+}
+data "optimizely_environment" "uat" {
+	key = "uat"
+}
+data "optimizely_environment" "prod" {
+	key = "prod"
+}
 
-	provider "optimizely" {
-		host  = var.api_host
-		token = var.api_token
-	}
-	
-	data "optimizely_environment" "sit" {
-		key = "sit"
-	}
-	data "optimizely_environment" "uat" {
-		key = "uat"
-	}
-	data "optimizely_environment" "prod" {
-		key = "prod"
-	}
+data "optimizely_project" "bees_test_cac" { 
+	id = 20410805626
+}
 
-	data "optimizely_project" "bees_test_cac" { 
-		id = 20410805626
-	}
+`
 
-	resource "optimizely_audience" "country_us" {
-		project	= data.optimizely_project.bees_test_cac.id
-		name = "{{.AudienceName}}-US"
-		conditions = "[\"and\", {\"type\": \"custom_attribute\", \"name\": \"COUNTRY\", \"value\": \"us\"}]"
-	}
-	
-	resource "optimizely_audience" "country_br" {
-		project	= data.optimizely_project.bees_test_cac.id
-		name = "{{.AudienceName}}-BR"
-		conditions = "[\"and\", {\"type\": \"custom_attribute\", \"name\": \"COUNTRY\", \"value\": \"br\"}]"
-	}
+var hclAudiences = `
+resource "optimizely_audience" "country_us" {
+	project	= data.optimizely_project.bees_test_cac.id
+	name = "{{.AudienceName}}-US"
+	conditions = jsonencode(["and", {"type": "custom_attribute", "name": "COUNTRY", "value": "us"}])
+}
 
+resource "optimizely_audience" "country_br" {
+	project	= data.optimizely_project.bees_test_cac.id
+	name = "{{.AudienceName}}-BR"
+	conditions = jsonencode(["and", {"type": "custom_attribute", "name": "COUNTRY", "value": "br"}])
+}
+`
+
+func testFlagConfigBasic(testConfig TestConfig) (string, error) {
+	tmpl, err := template.New("").Parse(hclCommon + hclAudiences + `
 	resource "optimizely_feature" "dynamic_forms_terraform" {
 		project	= data.optimizely_project.bees_test_cac.id
 		name        = "{{.FlagKey}} - Terraform"
@@ -223,34 +226,111 @@ func testFlagConfigBasic() (string, error) {
 	}
 
 	buf := &bytes.Buffer{}
-	err = tmpl.Execute(buf, data)
+	err = tmpl.Execute(buf, testConfig)
+
+	return buf.String(), err
+}
+
+func testFlagConfigUpdate(testConfig TestConfig) (string, error) {
+	tmpl, err := template.New("").Parse(hclCommon + hclAudiences + `
+	resource "optimizely_feature" "dynamic_forms_terraform" {
+		project	= data.optimizely_project.bees_test_cac.id
+		name        = "{{.FlagKey}} - Terraform - Updated"
+		description = "{{.FlagKey}} - Terraform - Updated"
+		key         = "{{.FlagKey}}-updated"
+	  
+		variable_schema {
+		  variable {
+			key         = "buttonPosition"
+			type         = "string"
+			default_value = "left"
+		  }
+
+		  variable {
+			key         = "buttonColor"
+			type         = "string"
+			default_value = "black"
+		  }
+		}
+
+		variations { 
+			variation { 
+				key = "blackButtonOnTheRight"
+				name = "blackButtonOnTheRight"
+				description = "blackButtonOnTheRight"
+				variables = {
+					buttonPosition = "right"
+					buttonColor = "black"
+				}
+			}
+		}
+	  
+		rules {
+		  rule {
+			key 		 = "us"
+			environments = [data.optimizely_environment.sit.id]
+			audience     = [optimizely_audience.country_us.id]
+			percentage_included = 50
+			deliver = "blackButtonOnTheRight"
+		  }
+		  
+		  rule {
+			key 		 = "br"
+			environments = [data.optimizely_environment.sit.id]
+			audience     = [optimizely_audience.country_br.id]
+			percentage_included = 75
+			deliver = "on"
+		  }
+
+		  rule {
+			key 		 = "br-uat"
+			environments = [data.optimizely_environment.uat.id]
+			audience     = [optimizely_audience.country_br.id]
+			percentage_included = 100
+			deliver = "on"
+		  }
+		}
+	  }
+	`)
+
+	if err != nil {
+		return "", err
+	}
+
+	buf := &bytes.Buffer{}
+	err = tmpl.Execute(buf, testConfig)
 
 	return buf.String(), err
 }
 
 func testAccCheckHashicupsOrderDestroy(s *terraform.State) error {
-	c := testAccProvider.Meta().(client.OptimizelyClient)
+	// c := testAccProvider.Meta().(client.OptimizelyClient)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "optimizely_feature" {
 			continue
 		}
 
-		flagId := rs.Primary.Attributes["key"]
+		// flagId := rs.Primary.Attributes["key"]
 
-		err := c.DeleteFlag(20410805626, flagId)
-		if err != nil {
-			fmt.Printf("\n delete flag error >>>>>>>>> %+v \n", err)
-			return err
-		}
+		// err := c.DeleteFlag(20410805626, flagId)
+		// if err != nil {
+		// 	fmt.Printf("\n delete flag error >>>>>>>>> %+v \n", err)
+		// 	return err
+		// }
 	}
 
 	return nil
 }
 
 func TestFlagBasic(t *testing.T) {
-	hcl, _ := testFlagConfigBasic()
-	hclUpdate := testFlagConfigUpdate()
+	testConfig := TestConfig{
+		AudienceName: strings.ToUpper(gofakeit.BS()),
+		FlagKey:      gofakeit.BS(),
+	}
+
+	hcl, _ := testFlagConfigBasic(testConfig)
+	// hclUpdate, _ := testFlagConfigUpdate(testConfig)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testAccProviders,
@@ -262,12 +342,12 @@ func TestFlagBasic(t *testing.T) {
 					testAccCheckHashicupsOrderExists("optimizely_feature.dynamic_forms_terraform"),
 				),
 			},
-			{
-				Config: hclUpdate,
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckHashicupsOrderExists("optimizely_feature.dynamic_forms_terraform"),
-				),
-			},
+			// {
+			// 	Config: hclUpdate,
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		testAccCheckHashicupsOrderExists("optimizely_feature.dynamic_forms_terraform"),
+			// 	),
+			// },
 		},
 	})
 }

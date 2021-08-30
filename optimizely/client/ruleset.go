@@ -99,17 +99,14 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 		httpClient := http.Client{}
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			fmt.Printf("\n\n Create ruleset - %s -- %+v \n\n", postBody, err)
 			return err
 		}
 
 		defer resp.Body.Close()
-		respBody, err := ioutil.ReadAll(resp.Body)
+		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("\n\n Create ruleset OK - reqBody: %s -- respBody: %s --  err: %+v \n\n", postBody, respBody, err)
 
 	}
 	return nil
@@ -126,17 +123,40 @@ func (c OptimizelyClient) EnableRuleset(flag flag.Flag) error {
 		httpClient := http.Client{}
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			fmt.Printf("client do err: %+v", err)
 			return err
 		}
 
 		defer resp.Body.Close()
-		respBody, err := ioutil.ReadAll(resp.Body)
+		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("\n\n enable ruleset OK -- respBody: %s --  err: %+v \n\n", respBody, err)
+	}
+
+	return nil
+}
+
+func (c OptimizelyClient) DisableRuleset(flag flag.Flag) error {
+
+	for env := range flag.Environments {
+		req, err := c.newEmptyRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset/disabled", flag.ProjectId, flag.Key, env))
+		if err != nil {
+			return err
+		}
+
+		httpClient := http.Client{}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

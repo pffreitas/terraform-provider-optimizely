@@ -1,7 +1,9 @@
 package audience
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -94,10 +96,21 @@ func resourceAudienceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	compactConditions := new(bytes.Buffer)
+	err = json.Compact(compactConditions, []byte(aud.Conditions))
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to compact conditions: %s --- %+v", aud.Conditions, err),
+		})
+
+		return diags
+	}
+
 	d.SetId(strconv.FormatInt(aud.ID, 10))
 	d.Set("name", aud.Name)
 	d.Set("description", aud.Description)
-	d.Set("conditions", aud.Conditions)
+	d.Set("conditions", compactConditions.String())
 
 	return diags
 }

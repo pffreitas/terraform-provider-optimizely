@@ -56,7 +56,6 @@ func (c OptimizelyClient) CreateFlag(feat flag.Flag) (flag.Flag, error) {
 	httpClient := http.Client{}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Printf("\n\n Create flag - %s -- %+v \n\n", postBody, err)
 		return feat, err
 	}
 
@@ -66,8 +65,6 @@ func (c OptimizelyClient) CreateFlag(feat flag.Flag) (flag.Flag, error) {
 		return feat, err
 	}
 
-	fmt.Printf("\n\n Create flag OK- %s -- %+v \n\n", postBody, err)
-
 	var featureResp flag.Flag
 	json.Unmarshal(body, &featureResp)
 
@@ -76,7 +73,7 @@ func (c OptimizelyClient) CreateFlag(feat flag.Flag) (flag.Flag, error) {
 
 func (c OptimizelyClient) DeleteFlag(projectId int, flagKey string) error {
 
-	req, err := c.newHttpRequest("DELETE", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey), nil)
+	req, err := c.newEmptyRequest("DELETE", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey))
 	if err != nil {
 		return err
 	}
