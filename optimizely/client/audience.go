@@ -27,6 +27,10 @@ func (c OptimizelyClient) CreateAudience(aud audience.Audience) (audience.Audien
 		return aud, err
 	}
 
+	if !c.isOk(resp.StatusCode) {
+		return audience.Audience{}, fmt.Errorf("failed to create audience in optimizely: %s", aud.Name)
+	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -50,6 +54,10 @@ func (c OptimizelyClient) GetAudience(audId string) (audience.Audience, error) {
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return audience.Audience{}, err
+	}
+
+	if !c.isOk(resp.StatusCode) {
+		return audience.Audience{}, fmt.Errorf("failed to get audience from optimizely: %s", audId)
 	}
 
 	defer resp.Body.Close()
@@ -83,6 +91,10 @@ func (c OptimizelyClient) ArchiveAudience(audId string) (audience.Audience, erro
 		return audience.Audience{}, err
 	}
 
+	if !c.isOk(resp.StatusCode) {
+		return audience.Audience{}, fmt.Errorf("failed to archive audience in optimizely: %s", audId)
+	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -110,6 +122,10 @@ func (c OptimizelyClient) UpdateAudience(aud audience.Audience) (audience.Audien
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return audience.Audience{}, err
+	}
+
+	if !c.isOk(resp.StatusCode) {
+		return audience.Audience{}, fmt.Errorf("failed to update audience in optimizely: %s", aud.Name)
 	}
 
 	defer resp.Body.Close()

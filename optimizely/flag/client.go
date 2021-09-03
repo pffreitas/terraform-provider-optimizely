@@ -2,6 +2,7 @@ package flag
 
 type FlagClient interface {
 	CreateFlag(flag Flag) (Flag, error)
+	GetFlag(projectId int, flagKey string) (Flag, error)
 	DeleteFlag(projectId int, flagKey string) error
 
 	CreateRuleset(flag Flag) error

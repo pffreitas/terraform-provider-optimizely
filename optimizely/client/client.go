@@ -29,3 +29,7 @@ func (c OptimizelyClient) newEmptyRequest(method, url string) (*http.Request, er
 
 	return req, err
 }
+
+func (c OptimizelyClient) isOk(statusCode int) bool {
+	return statusCode >= 200 && statusCode < 300
+}

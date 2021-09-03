@@ -2,6 +2,7 @@ package flag
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -16,7 +17,7 @@ type Flag struct {
 	Description  string                        `json:"description"`
 	Key          string                        `json:"key"`
 	Archived     bool                          `json:"archived"`
-	Variables    []VariableSchema              `json:"variables"`
+	Variables    map[string]VariableSchema     `json:"variable_definitions"`
 	Variations   []Variation                   `json:"variations"`
 	Environments map[string]FeatureEnvironment `json:"environments"`
 }
@@ -183,8 +184,6 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	flag := parseFlag(d)
 
-	fmt.Printf("CREATE %s \n", flag.Key)
-
 	featResp, err := client.CreateFlag(flag)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
@@ -234,6 +233,22 @@ func resourceFeatureCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+	client := m.(FlagClient)
+
+	flag := parseFlag(d)
+
+	flagResp, err := client.GetFlag(flag.ProjectId, flag.Key)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed fetch flag from Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	flagRespJson, _ := json.Marshal(flagResp)
+	fmt.Printf("Read Flag: %s", flagRespJson)
 
 	return diags
 }

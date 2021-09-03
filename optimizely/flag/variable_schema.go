@@ -8,22 +8,24 @@ type VariableSchema struct {
 	Type         string `json:"type"`
 }
 
-func parseVariableSchema(d *schema.ResourceData) []VariableSchema {
-	var variablesSchema []VariableSchema
-	variableSchema := d.Get("variable_schema").([]interface{})
+func parseVariableSchema(d *schema.ResourceData) map[string]VariableSchema {
+	variableSchemaByKey := make(map[string]VariableSchema)
+	variableSchemaList := d.Get("variable_schema").([]interface{})
 
-	for _, variable := range variableSchema {
+	for _, variable := range variableSchemaList {
 		vars := variable.(map[string]interface{})["variable"]
 		for _, v := range vars.([]interface{}) {
 			vMap := v.(map[string]interface{})
-			vSchema := VariableSchema{
-				Key:          vMap["key"].(string),
+
+			key := vMap["key"].(string)
+			variableSchema := VariableSchema{
+				Key:          key,
 				DefaultValue: vMap["default_value"].(string),
 				Type:         vMap["type"].(string),
 			}
-			variablesSchema = append(variablesSchema, vSchema)
+			variableSchemaByKey[key] = variableSchema
 		}
 	}
 
-	return variablesSchema
+	return variableSchemaByKey
 }

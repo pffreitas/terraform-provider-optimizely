@@ -71,6 +71,30 @@ func (c OptimizelyClient) CreateFlag(feat flag.Flag) (flag.Flag, error) {
 	return featureResp, nil
 }
 
+func (c OptimizelyClient) GetFlag(projectId int, flagKey string) (flag.Flag, error) {
+	req, err := c.newHttpRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey), nil)
+	if err != nil {
+		return flag.Flag{}, err
+	}
+
+	httpClient := http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return flag.Flag{}, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return flag.Flag{}, err
+	}
+
+	var flagResp flag.Flag
+	json.Unmarshal(body, &flagResp)
+
+	return flagResp, nil
+}
+
 func (c OptimizelyClient) DeleteFlag(projectId int, flagKey string) error {
 
 	req, err := c.newEmptyRequest("DELETE", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey))
