@@ -58,19 +58,23 @@ func ResourceFeature() *schema.Resource {
 						"variable": {
 							Type:     schema.TypeList,
 							Required: true,
+							ForceNew: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 									"type": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 									"default_value": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 								},
 							},
@@ -87,23 +91,28 @@ func ResourceFeature() *schema.Resource {
 						"variation": {
 							Type:     schema.TypeList,
 							Required: true,
+							ForceNew: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 									"name": {
 										Type:     schema.TypeString,
 										Optional: true,
+										ForceNew: true,
 									},
 									"description": {
 										Type:     schema.TypeString,
 										Optional: true,
+										ForceNew: true,
 									},
 									"variables": {
 										Type:     schema.TypeMap,
 										Optional: true,
+										ForceNew: true,
 									},
 								},
 							},
@@ -120,15 +129,18 @@ func ResourceFeature() *schema.Resource {
 						"rule": {
 							Type:     schema.TypeList,
 							Required: true,
+							ForceNew: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 									"environments": {
 										Type:     schema.TypeList,
 										Required: true,
+										ForceNew: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -136,6 +148,7 @@ func ResourceFeature() *schema.Resource {
 									"audience": {
 										Type:     schema.TypeList,
 										Required: true,
+										ForceNew: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -143,10 +156,12 @@ func ResourceFeature() *schema.Resource {
 									"percentage_included": {
 										Type:     schema.TypeInt,
 										Required: true,
+										ForceNew: true,
 									},
 									"deliver": {
 										Type:     schema.TypeString,
 										Required: true,
+										ForceNew: true,
 									},
 								},
 							},
