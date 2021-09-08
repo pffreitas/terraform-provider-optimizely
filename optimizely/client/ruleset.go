@@ -154,11 +154,12 @@ func (c OptimizelyClient) GetRuleset(flg flag.Flag) (map[string]flag.FeatureEnvi
 
 			audienceConditions := []flag.Condition{}
 			for _, aud := range ruleset.AudicenceConditions {
-				if d, ok := aud.(map[string]interface{}); ok {
-					audienceId := d["audience_id"].(float64)
-					audienceConditions = append(audienceConditions, flag.AudienceCondition{
-						AudienceID: int64(audienceId),
-					})
+				if audienceConditionMap, ok := aud.(map[string]interface{}); ok {
+					if audienceId, ok := audienceConditionMap["audience_id"].(float64); ok {
+						audienceConditions = append(audienceConditions, flag.AudienceCondition{
+							AudienceID: int64(audienceId),
+						})
+					}
 				}
 			}
 
