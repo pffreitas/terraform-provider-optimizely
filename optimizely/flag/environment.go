@@ -44,7 +44,7 @@ func parseEnvironment(d *schema.ResourceData) map[string]FeatureEnvironment {
 				rolloutRule := RolloutRule{
 					Key:                rMap["key"].(string),
 					AudienceConditions: audConditions,
-					PercentageIncluded: rollout * 100,
+					PercentageIncluded: rollout * 100, // TODO mover pro client impl
 					Deliver:            rMap["deliver"].(string),
 				}
 

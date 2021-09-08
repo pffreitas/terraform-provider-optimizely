@@ -148,13 +148,13 @@ data "optimizely_project" "bees_test_cac" {
 var hclAudiences = `
 resource "optimizely_audience" "country_us" {
 	project	= data.optimizely_project.bees_test_cac.id
-	name = "{{.AudienceName}}-US"
+	name = "{{.AudienceName}}-US-2"
 	conditions = jsonencode(["and", {"type": "custom_attribute", "name": "COUNTRY", "value": "us"}])
 }
 
 resource "optimizely_audience" "country_br" {
 	project	= data.optimizely_project.bees_test_cac.id
-	name = "{{.AudienceName}}-BR"
+	name = "{{.AudienceName}}-BR-2"
 	conditions = jsonencode(["and", {"type": "custom_attribute", "name": "COUNTRY", "value": "br"}])
 }
 `

@@ -247,6 +247,26 @@ func resourceFeatureRead(ctx context.Context, d *schema.ResourceData, m interfac
 		return diags
 	}
 
+	flagResp.Variations, err = client.GetVariation(flag.ProjectId, flag.Key)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed fetch flag from Optimizely; failed to fetch variations: %+v", err),
+		})
+
+		return diags
+	}
+
+	flagResp.Environments, err = client.GetRuleset(flag)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed fetch flag from Optimizely; failed to fetch environment rules: %+v", err),
+		})
+
+		return diags
+	}
+
 	flagRespJson, _ := json.Marshal(flagResp)
 	fmt.Printf("Read Flag: %s", flagRespJson)
 

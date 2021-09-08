@@ -55,3 +55,35 @@ func (c OptimizelyClient) CreateVariation(flag flag.Flag, variation flag.Variati
 
 	return nil
 }
+
+type getVariationResponse struct {
+	Items []flag.Variation `json:"items"`
+}
+
+func (c OptimizelyClient) GetVariation(projectId int, flagKey string) ([]flag.Variation, error) {
+	var variations []flag.Variation
+	req, err := c.newHttpRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s/variations", projectId, flagKey), nil)
+	if err != nil {
+		return variations, err
+	}
+
+	httpClient := http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return variations, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return variations, err
+	}
+
+	var getVariationResponse getVariationResponse
+	err = json.Unmarshal(body, &getVariationResponse)
+	if err != nil {
+		return variations, err
+	}
+
+	return getVariationResponse.Items, nil
+}

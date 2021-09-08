@@ -112,6 +112,71 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 	return nil
 }
 
+type getRulesetResponse struct {
+	Rules map[string]OptimizelyRuleset `json:"rules"`
+}
+
+func (c OptimizelyClient) GetRuleset(flg flag.Flag) (map[string]flag.FeatureEnvironment, error) {
+	flagEnvs := make(map[string]flag.FeatureEnvironment)
+
+	for env := range flg.Environments {
+		flagEnv := flag.FeatureEnvironment{}
+
+		req, err := c.newEmptyRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset", flg.ProjectId, flg.Key, env))
+		if err != nil {
+			return flagEnvs, err
+		}
+
+		httpClient := http.Client{}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return flagEnvs, err
+		}
+
+		defer resp.Body.Close()
+		rulesetResponseBodyStr, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return flagEnvs, err
+		}
+
+		var rulesetResponseBody getRulesetResponse
+		err = json.Unmarshal(rulesetResponseBodyStr, &rulesetResponseBody)
+		if err != nil {
+			return flagEnvs, err
+		}
+
+		for _, ruleset := range rulesetResponseBody.Rules {
+
+			deliver := ""
+			for variationKey := range ruleset.Variations {
+				deliver = variationKey
+			}
+
+			audienceConditions := []flag.Condition{}
+			for _, aud := range ruleset.AudicenceConditions {
+				if d, ok := aud.(map[string]interface{}); ok {
+					audienceId := d["audience_id"].(float64)
+					audienceConditions = append(audienceConditions, flag.AudienceCondition{
+						AudienceID: int64(audienceId),
+					})
+				}
+			}
+
+			flagEnv.RolloutRules = append(flagEnv.RolloutRules, flag.RolloutRule{
+				Key:                ruleset.Key,
+				PercentageIncluded: ruleset.PercentageIncluded / 100,
+				AudienceConditions: audienceConditions,
+				Deliver:            deliver,
+			})
+		}
+
+		flagEnvs[env] = flagEnv
+	}
+
+	return flagEnvs, nil
+
+}
+
 func (c OptimizelyClient) EnableRuleset(flag flag.Flag) error {
 
 	for env := range flag.Environments {
