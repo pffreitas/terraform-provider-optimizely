@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
+        name: gpg-version
+        run: |
+          gpg --version
+        shell: bash
+      -
         name: Checkout
         uses: actions/checkout@v2.3.4
       -
@@ -34,7 +39,6 @@ jobs:
         id: import_gpg
         uses: hashicorp/ghaction-import-gpg@v2.1.0
         env:
-          # These secrets will need to be configured for the repository:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           PASSPHRASE: ${{ secrets.PASSPHRASE }}
       -
