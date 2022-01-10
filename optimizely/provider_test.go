@@ -43,8 +43,6 @@ func testAccCheckHashicupsOrderConfigBasic() string {
 	return `
 	provider "optimizely" {
 		host  = "https://api.optimizely.com/v2"
-		token = "2:myr1dVQxw203jqcj-vr4Sxr1PNAfu2FzPrwauwA_vPcc9HHMB1GY"
-		project_id = "19036502365"
 	}
 	
 	data "optimizely_environment" "sit" {}
@@ -60,8 +58,6 @@ func testAccCheckHashicupsOrderConfigBasic2() string {
 	return `
 	provider "optimizely" {
 		host  = "https://api.optimizely.com/v2"
-		token = "2:myr1dVQxw203jqcj-vr4Sxr1PNAfu2FzPrwauwA_vPcc9HHMB1GY"
-		project_id = "19036502365"
 	}
 	
 	data "optimizely_environment" "sit" {}
