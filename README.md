@@ -1,4 +1,1 @@
 ### Terraform provider for Optimizely
-
-
-
