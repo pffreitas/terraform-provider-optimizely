@@ -65,7 +65,7 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 				Variations: map[string]RulesetVariation{
 					rule.Deliver: {
 						Key:                rule.Deliver,
-						PercentageIncluded: rule.PercentageIncluded,
+						PercentageIncluded: 10000,
 					},
 				},
 				AudicenceConditions: rule.AudienceConditions,
