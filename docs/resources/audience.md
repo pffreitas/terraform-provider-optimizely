@@ -1,7 +1,6 @@
 # Audience Resource
 
-Description of what this resource does, with links to official
-app/service documentation.
+Manages Optimizely Audiences 
 
 ## Example Usage
 
@@ -14,9 +13,9 @@ resource "optimizely_audience" "country_us" {
 
 ## Argument Reference
 
-* `name` - (Optional/Required) List arguments this resource takes.
-* `conditions` - (Optional/Required) List arguments this resource takes.
+* `name` - (Required) Name.
+* `conditions` - (Required) Conditions.
 
 ## Attribute Reference
 
-* `id` - List attributes that this resource exports.
+* `id` - Audience Id.
