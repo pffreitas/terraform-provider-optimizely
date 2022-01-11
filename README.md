@@ -1,6 +1,6 @@
 ### Terraform provider for Optimizely
 
-
+Find provider configuration [here](https://registry.terraform.io/providers/pffreitas/optimizely/latest/docs)
 
 
 ### How to use 
