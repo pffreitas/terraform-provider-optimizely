@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -11,25 +12,33 @@ type OptimizelyClient struct {
 	Token   string
 }
 
-func (c OptimizelyClient) newHttpRequest(method, url string, body io.Reader) (*http.Request, error) {
+func (c OptimizelyClient) sendHttpRequest(method, url string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", c.Address, url), body)
-	req.Header.Set("Content-type", "application/json")
-	c.configureToken(req)
+	if err != nil {
+		return nil, err
+	}
 
-	return req, err
-}
-
-func (c OptimizelyClient) configureToken(req *http.Request) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
-}
 
-func (c OptimizelyClient) newEmptyRequest(method, url string) (*http.Request, error) {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", c.Address, url), nil)
-	c.configureToken(req)
+	if body != nil {
+		req.Header.Set("Content-type", "application/json")
+	}
 
-	return req, err
-}
+	httpClient := http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
 
-func (c OptimizelyClient) isOk(statusCode int) bool {
-	return statusCode >= 200 && statusCode < 300
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("HTTP status %d\n\n%s", resp.StatusCode, respBody)
+	}
+
+	return respBody, nil
 }

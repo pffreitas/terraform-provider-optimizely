@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/pffreitas/optimizely-terraform-provider/optimizely/flag"
 )
@@ -91,23 +89,10 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 			return err
 		}
 
-		req, err := c.newHttpRequest("PATCH", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset", flag.ProjectId, flag.Key, env), bytes.NewBuffer(postBody))
+		_, err = c.sendHttpRequest("PATCH", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset", flag.ProjectId, flag.Key, env), bytes.NewBuffer(postBody))
 		if err != nil {
 			return err
 		}
-
-		httpClient := http.Client{}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return err
-		}
-
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
 	}
 	return nil
 }
@@ -122,19 +107,7 @@ func (c OptimizelyClient) GetRuleset(flg flag.Flag) (map[string]flag.FeatureEnvi
 	for env := range flg.Environments {
 		flagEnv := flag.FeatureEnvironment{}
 
-		req, err := c.newEmptyRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset", flg.ProjectId, flg.Key, env))
-		if err != nil {
-			return flagEnvs, err
-		}
-
-		httpClient := http.Client{}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return flagEnvs, err
-		}
-
-		defer resp.Body.Close()
-		rulesetResponseBodyStr, err := ioutil.ReadAll(resp.Body)
+		rulesetResponseBodyStr, err := c.sendHttpRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset", flg.ProjectId, flg.Key, env), nil)
 		if err != nil {
 			return flagEnvs, err
 		}
@@ -181,23 +154,10 @@ func (c OptimizelyClient) GetRuleset(flg flag.Flag) (map[string]flag.FeatureEnvi
 func (c OptimizelyClient) EnableRuleset(flag flag.Flag) error {
 
 	for env := range flag.Environments {
-		req, err := c.newEmptyRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset/enabled", flag.ProjectId, flag.Key, env))
+		_, err := c.sendHttpRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset/enabled", flag.ProjectId, flag.Key, env), nil)
 		if err != nil {
 			return err
 		}
-
-		httpClient := http.Client{}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return err
-		}
-
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
 	}
 
 	return nil
@@ -206,23 +166,10 @@ func (c OptimizelyClient) EnableRuleset(flag flag.Flag) error {
 func (c OptimizelyClient) DisableRuleset(flag flag.Flag) error {
 
 	for env := range flag.Environments {
-		req, err := c.newEmptyRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset/disabled", flag.ProjectId, flag.Key, env))
+		_, err := c.sendHttpRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags/%s/environments/%s/ruleset/disabled", flag.ProjectId, flag.Key, env), nil)
 		if err != nil {
 			return err
 		}
-
-		httpClient := http.Client{}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return err
-		}
-
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
 	}
 
 	return nil
