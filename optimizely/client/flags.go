@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/pffreitas/optimizely-terraform-provider/optimizely/flag"
 )
@@ -48,68 +46,30 @@ func (c OptimizelyClient) CreateFlag(feat flag.Flag) (flag.Flag, error) {
 		return feat, err
 	}
 
-	req, err := c.newHttpRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags", feat.ProjectId), bytes.NewBuffer(postBody))
-	if err != nil {
-		return feat, err
-	}
-
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return feat, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	respBody, err := c.sendHttpRequest("POST", fmt.Sprintf("flags/v1/projects/%d/flags", feat.ProjectId), bytes.NewBuffer(postBody))
 	if err != nil {
 		return feat, err
 	}
 
 	var featureResp flag.Flag
-	json.Unmarshal(body, &featureResp)
+	json.Unmarshal(respBody, &featureResp)
 
 	return featureResp, nil
 }
 
 func (c OptimizelyClient) GetFlag(projectId int, flagKey string) (flag.Flag, error) {
-	req, err := c.newHttpRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey), nil)
-	if err != nil {
-		return flag.Flag{}, err
-	}
-
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return flag.Flag{}, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	respBody, err := c.sendHttpRequest("GET", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey), nil)
 	if err != nil {
 		return flag.Flag{}, err
 	}
 
 	var flagResp flag.Flag
-	json.Unmarshal(body, &flagResp)
+	json.Unmarshal(respBody, &flagResp)
 
 	return flagResp, nil
 }
 
 func (c OptimizelyClient) DeleteFlag(projectId int, flagKey string) error {
-
-	req, err := c.newEmptyRequest("DELETE", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey))
-	if err != nil {
-		return err
-	}
-
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
+	_, err := c.sendHttpRequest("DELETE", fmt.Sprintf("flags/v1/projects/%d/flags/%s", projectId, flagKey), nil)
 	return err
 }
