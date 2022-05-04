@@ -123,13 +123,11 @@ func ResourceFeature() *schema.Resource {
 			"rules": {
 				Type:     schema.TypeList,
 				Optional: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"rule": {
 							Type:     schema.TypeList,
 							Required: true,
-							ForceNew: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"key": {
@@ -140,7 +138,6 @@ func ResourceFeature() *schema.Resource {
 									"environments": {
 										Type:     schema.TypeList,
 										Required: true,
-										ForceNew: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -148,7 +145,6 @@ func ResourceFeature() *schema.Resource {
 									"audience": {
 										Type:     schema.TypeList,
 										Required: true,
-										ForceNew: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -156,12 +152,10 @@ func ResourceFeature() *schema.Resource {
 									"percentage_included": {
 										Type:     schema.TypeInt,
 										Required: true,
-										ForceNew: true,
 									},
 									"deliver": {
 										Type:     schema.TypeString,
 										Required: true,
-										ForceNew: true,
 									},
 								},
 							},
@@ -173,6 +167,7 @@ func ResourceFeature() *schema.Resource {
 		CreateContext: resourceFeatureCreate,
 		ReadContext:   resourceFeatureRead,
 		DeleteContext: resourceFeatureDelete,
+		UpdateContext: resourceFeatureUpdate,
 	}
 }
 
@@ -316,5 +311,35 @@ func resourceFeatureDelete(ctx context.Context, d *schema.ResourceData, m interf
 		return diags
 	}
 
+	return diags
+}
+
+func resourceFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+	client := m.(FlagClient)
+
+	flag := parseFlag(d)
+
+	err := client.UpdateRuleset(flag)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to create ruleset in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	err = client.EnableRuleset(flag)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to enable ruleset in Optimizely: %+v", err),
+		})
+
+		return diags
+	}
+
+	// return resourceFeatureRead(ctx, d, m)
 	return diags
 }

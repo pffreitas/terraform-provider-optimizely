@@ -49,8 +49,7 @@ type OptimizelyRules struct {
 	RulePriorities []string            `json:"rule_priorities"`
 }
 
-func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
-
+func (c OptimizelyClient) PatchRuleset(flag flag.Flag, operation Operation) error {
 	for env, flagEnv := range flag.Environments {
 		ops := []OptimizelyOp{}
 
@@ -71,13 +70,13 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 			}
 
 			ops = append(ops, OptimizelyOp{
-				Op:    "add",
+				Op:    operation,
 				Path:  fmt.Sprintf("/rules/%s", rule.Key),
 				Value: ruleset,
 			})
 
 			ops = append(ops, OptimizelyOp{
-				Op:    "add",
+				Op:    operation,
 				Path:  fmt.Sprintf("/rule_priorities/%d", i),
 				Value: rule.Key,
 			})
@@ -95,6 +94,14 @@ func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
 		}
 	}
 	return nil
+}
+
+func (c OptimizelyClient) CreateRuleset(flag flag.Flag) error {
+	return c.PatchRuleset(flag, "add")
+}
+
+func (c OptimizelyClient) UpdateRuleset(flag flag.Flag) error {
+	return c.PatchRuleset(flag, "replace")
 }
 
 type getRulesetResponse struct {
