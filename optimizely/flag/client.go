@@ -6,6 +6,7 @@ type FlagClient interface {
 	DeleteFlag(projectId int, flagKey string) error
 
 	CreateRuleset(flag Flag) error
+	UpdateRuleset(flag Flag) error
 	GetRuleset(flag Flag) (map[string]FeatureEnvironment, error)
 	EnableRuleset(flag Flag) error
 	DisableRuleset(flag Flag) error
