@@ -33,9 +33,14 @@ func parseEnvironment(d *schema.ResourceData) map[string]FeatureEnvironment {
 			rMap := r.(map[string]interface{})
 			environments := rMap["environments"].([]interface{})
 			for _, env := range environments {
-				audConditions := []Condition{"and"}
+				audiences := rMap["audience"].([]interface{})
+				audConditions := []Condition{}
 
-				for _, audId := range rMap["audience"].([]interface{}) {
+				if len(audiences) > 0 {
+					audConditions = append(audConditions, "and")
+				}
+
+				for _, audId := range audiences {
 					audIdInt, _ := strconv.ParseInt(audId.(string), 10, 64)
 					audConditions = append(audConditions, AudienceCondition{AudienceID: audIdInt})
 				}
