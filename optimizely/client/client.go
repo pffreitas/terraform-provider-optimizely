@@ -8,8 +8,9 @@ import (
 )
 
 type OptimizelyClient struct {
-	Address string
-	Token   string
+	Address    string
+	Token      string
+	HttpClient http.Client
 }
 
 func (c OptimizelyClient) sendHttpRequest(method, url string, body io.Reader) ([]byte, error) {
@@ -24,8 +25,7 @@ func (c OptimizelyClient) sendHttpRequest(method, url string, body io.Reader) ([
 		req.Header.Set("Content-type", "application/json")
 	}
 
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
+	resp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
